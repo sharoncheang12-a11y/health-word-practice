@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edf6f0">
+  <meta name="robots" content="noindex">
+  <title>健康小練習｜詞語填充</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      color: #19352f;
+      background: #edf6f0;
+      --green: #146451;
+      --line: #c7dcd0;
+      --muted: #49645a;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; }
+    main { width: min(100% - 32px, 780px); margin: 0 auto; padding: 32px 0; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: clamp(1.7rem, 4vw, 2.65rem); letter-spacing: .03em; }
+    h2 { font-size: 1.35rem; }
+    button {
+      border: 1px solid var(--line); border-radius: 12px; background: white;
+      color: inherit; font: inherit; font-weight: 700; min-height: 46px;
+      padding: 8px 14px; cursor: pointer; touch-action: manipulation;
+    }
+    button:disabled { cursor: default; opacity: .52; }
+    button:focus-visible { outline: 3px solid #9a5800; outline-offset: 3px; }
+    .header, .status, .controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .header { margin-bottom: 18px; }
+    .eyebrow { color: var(--green); font-weight: 700; letter-spacing: .15em; font-size: .85rem; margin-bottom: 4px; }
+    .intro { color: var(--muted); margin-top: 6px; line-height: 1.6; }
+    .panel { background: white; border: 1px solid var(--line); border-radius: 24px; padding: clamp(16px, 4vw, 32px); box-shadow: 0 8px 24px #19352f0c; }
+    .status { font-weight: 700; }
+    #progress-label, .help { color: var(--muted); }
+    progress { display: block; width: 100%; height: 8px; margin: 12px 0; appearance: none; border: 0; border-radius: 8px; overflow: hidden; background: #e6efe9; }
+    progress::-webkit-progress-bar { background: #e6efe9; }
+    progress::-webkit-progress-value { background: var(--green); }
+    progress::-moz-progress-bar { background: var(--green); }
+    .steps { display: grid; grid-template-columns: repeat(10, minmax(44px, 1fr)); gap: 6px; }
+    .step { padding: 0; }
+    .step.done { background: #e4f3e9; }
+    .step[aria-current="step"], .primary { background: var(--green); color: white; border-color: var(--green); }
+    .question { font-size: clamp(1.3rem, 3.3vw, 1.95rem); line-height: 2.15; margin: 24px 0 18px; overflow-wrap: anywhere; }
+    .blank { min-width: 3.65em; min-height: 48px; padding: 0 .4em; margin: 0 .12em; line-height: 1.4; border: 2px dashed #6d8d81; color: #3d6256; white-space: nowrap; }
+    .blank.filled { border-style: solid; background: #edf6f0; color: #19352f; }
+    .blank[aria-pressed="true"] { border-style: solid; border-color: #a35c00; background: #fff1cd; color: #633700; }
+    .blank.locked { cursor: default; opacity: 1; }
+    .word-bank { background: #f5f9f6; border-radius: 16px; padding: 14px; }
+    .word-bank h3 { margin: 0 0 10px; font-size: 1rem; }
+    .words { display: flex; flex-wrap: wrap; gap: 8px; }
+    .word { min-width: 70px; min-height: 52px; font-size: 1.2rem; }
+    .help { margin-top: 8px; line-height: 1.5; min-height: 1.5em; }
+    .controls { margin-top: 18px; }
+    .arrows { display: flex; gap: 8px; }
+    .score { font-size: clamp(2.2rem, 7vw, 3.8rem); color: var(--green); font-weight: 800; margin: 6px 0; }
+    .review { margin: 16px 0; padding-left: 1.5em; }
+    .review li { padding: 4px 0; line-height: 1.65; }
+    @media (max-width: 590px) { .steps { grid-template-columns: repeat(5, 1fr); } }
+    @media (max-width: 400px) { main { padding: 18px 0; } .controls { align-items: stretch; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="header">
+      <div>
+        <p class="eyebrow">健康小練習</p>
+        <h1>詞語填充</h1>
+        <p class="intro">先點空格，再點詞語。全部填完後交卷。</p>
+      </div>
+      <button id="restart" type="button">↻ 重新出題</button>
+    </header>
+
+    <section id="practice" class="panel" aria-labelledby="question-number">
+      <div class="status">
+        <h2 id="question-number" tabindex="-1"></h2>
+        <span id="progress-label"></span>
+      </div>
+      <progress id="progress" aria-label="已完成題數"></progress>
+      <nav id="steps" class="steps" aria-label="跳到指定題目"></nav>
+      <p id="question" class="question"></p>
+      <div class="word-bank">
+        <h3>詞語框</h3>
+        <div id="words" class="words"></div>
+      </div>
+      <p id="help" class="help" role="status"></p>
+      <div class="controls">
+        <div class="arrows">
+          <button id="previous" type="button">上一題</button>
+          <button id="next" type="button">下一題</button>
+        </div>
+        <button id="submit" class="primary" type="button">交卷</button>
+      </div>
+    </section>
+
+    <section id="results" class="panel" aria-labelledby="result-title" hidden>
+      <h2 id="result-title" tabindex="-1">交卷結果</h2>
+      <p id="score" class="score"></p>
+      <p id="result-message"></p>
+      <ol id="review" class="review"></ol>
+      <div class="controls">
+        <button id="retry" class="primary" type="button">只重做錯題</button>
+        <button id="new-round" type="button">重新出題</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const safety = ['性格', '衣物', '喜好', '呼救'];
+    const growth = ['學習', '恆齒', '比較', '接受'];
+    const habits = ['刷牙', '飲食', '睡眠', '有益', '腰背'];
+
+    const questions = [
+      { sentence: '我們要穿上適當的＿，保護私隱部位，不可以隨便讓人看見或觸摸。', bank: safety, key: ['衣物'] },
+      { sentence: '男孩和女孩的＿和＿可以相同，也可以不同。', bank: safety, key: ['性格', '喜好'], interchangeable: true },
+      { sentence: '當遇到壞的接觸，要立刻避開，並大聲＿。', bank: safety, key: ['呼救'] },
+      { sentence: '小孩子長大了，乳齒會脫落，長出＿。', bank: growth, key: ['恆齒'] },
+      { sentence: '每個人成長的速度不一樣，我要＿自己，不要與別人＿。', bank: growth, key: ['接受', '比較'] },
+      { sentence: '我們應該早睡早起，每天保持充足＿。', bank: habits, key: ['睡眠'] },
+      { sentence: '坐、立和走路時，我們要挺直＿。', bank: habits, key: ['腰背'] },
+      { sentence: '我們要養成良好的＿習慣，例如多吃有益的食物。', bank: habits, key: ['飲食'] },
+      { sentence: '每天要定時和適量進食三餐，並要多吃＿的食物。', bank: habits, key: ['有益'] },
+      { sentence: '早晚＿是保護牙齒的方法。', bank: habits, key: ['刷牙'] }
+    ];
+
+    const byId = id => document.getElementById(id);
+    let round = [];
+    let visible = [];
+    let position = 0;
+    let activeBlank = -1;
+    let wrong = [];
+
+    function shuffle(items, previous = []) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      if (copy.length > 1 && copy.every((item, i) => item === previous[i])) {
+        copy.push(copy.shift());
+      }
+      return copy;
+    }
+
+    function button(label, className, onClick) {
+      const element = document.createElement('button');
+      element.type = 'button';
+      element.textContent = label;
+      element.className = className;
+      element.addEventListener('click', onClick);
+      return element;
+    }
+
+    function openQuestion(index, focusHeading = true) {
+      position = index;
+      activeBlank = -1;
+      renderQuestion();
+      byId('help').textContent = '點一下句子中的空格。';
+      if (focusHeading) byId('question-number').focus();
+    }
+
+    function renderQuestion() {
+      const item = visible[position];
+      const completed = round.filter(entry => entry.answers.every(Boolean)).length;
+      byId('question-number').textContent = `第 ${item.number} 題`;
+      byId('progress-label').textContent = `已填 ${completed}／${round.length} 題`;
+      byId('progress').max = round.length;
+      byId('progress').value = completed;
+      byId('steps').replaceChildren(...visible.map((entry, index) => {
+        const filled = entry.answers.every(Boolean);
+        const step = button(entry.number, filled ? 'step done' : 'step', () => openQuestion(index));
+        step.setAttribute('aria-label', `第 ${entry.number} 題，${filled ? '已填' : '未完成'}`);
+        if (index === position) step.setAttribute('aria-current', 'step');
+        return step;
+      }));
+
+      const sentence = byId('question');
+      sentence.replaceChildren();
+      item.question.sentence.split('＿').forEach((part, i) => {
+        if (i > 0) {
+          const index = i - 1;
+          const value = item.answers[index];
+          const blank = button(value || '＿＿', value ? 'blank filled' : 'blank', () => {
+            activeBlank = index;
+            renderQuestion();
+            byId('help').textContent = `已選第 ${i} 個空格，請點一個詞語。`;
+            byId('words').firstElementChild.focus({ preventScroll: true });
+          });
+          blank.setAttribute('aria-label', `第 ${i} 個空格，${value || '未填'}${item.locked[index] ? '，已答對' : ''}`);
+          blank.setAttribute('aria-pressed', String(activeBlank === index));
+          if (item.locked[index]) {
+            blank.disabled = true;
+            blank.classList.add('locked');
+          }
+          sentence.append(blank);
+        }
+        sentence.append(part);
+      });
+
+      byId('words').replaceChildren(...item.words.map(word => button(word, 'word', () => {
+        if (activeBlank < 0) {
+          byId('help').textContent = '請先點句子中的空格，再選詞語。';
+          sentence.querySelector('.blank:not(:disabled)').focus({ preventScroll: true });
+          return;
+        }
+        const filledBlank = activeBlank;
+        item.answers[filledBlank] = word;
+        activeBlank = -1;
+        renderQuestion();
+        byId('help').textContent = `已填入「${word}」。要更改時，再點一次空格。`;
+        sentence.querySelectorAll('.blank')[filledBlank].focus({ preventScroll: true });
+      })));
+      byId('previous').disabled = position === 0;
+      byId('next').disabled = position === visible.length - 1;
+    }
+
+    function startRound(focusHeading = true) {
+      const previous = new Map(round.map(item => [item.question, item.words]));
+      round = shuffle(questions, round.map(item => item.question)).map((question, index) => ({
+        question,
+        number: index + 1,
+        words: shuffle(question.bank, previous.get(question)),
+        answers: question.key.map(() => ''),
+        locked: question.key.map(() => false)
+      }));
+      visible = round;
+      byId('practice').hidden = false;
+      byId('results').hidden = true;
+      openQuestion(0, focusHeading);
+    }
+
+    function checkBlanks(item) {
+      const { key, interchangeable } = item.question;
+      if (!interchangeable) return key.map((word, index) => word === item.answers[index]);
+      const used = new Set();
+      return item.answers.map(word => {
+        if (!key.includes(word) || used.has(word)) return false;
+        used.add(word);
+        return true;
+      });
+    }
+
+    function grade() {
+      const unfinished = visible.findIndex(item => !item.answers.every(Boolean));
+      if (unfinished !== -1) {
+        openQuestion(unfinished);
+        byId('help').textContent = '這題還有空格未填。全部填完就可以交卷。';
+        return;
+      }
+
+      for (const item of round) item.locked = checkBlanks(item);
+      wrong = round.filter(item => !item.locked.every(Boolean));
+      byId('practice').hidden = true;
+      byId('results').hidden = false;
+      byId('score').textContent = `${round.length - wrong.length}／${round.length} 題答對`;
+      byId('result-message').textContent = wrong.length ? '這幾題可以再試一次。' : '全部答對了！';
+      byId('review').replaceChildren(...wrong.map(item => {
+        const row = document.createElement('li');
+        row.value = item.number;
+        row.textContent = item.question.sentence.replaceAll('＿', '＿＿');
+        return row;
+      }));
+      byId('review').hidden = wrong.length === 0;
+      byId('retry').hidden = wrong.length === 0;
+      byId('result-title').focus();
+    }
+
+    byId('previous').addEventListener('click', () => openQuestion(position - 1));
+    byId('next').addEventListener('click', () => openQuestion(position + 1));
+    byId('submit').addEventListener('click', grade);
+    byId('retry').addEventListener('click', () => {
+      for (const item of wrong) item.answers = item.answers.map((word, i) => item.locked[i] ? word : '');
+      visible = wrong;
+      byId('practice').hidden = false;
+      byId('results').hidden = true;
+      openQuestion(0);
+      byId('help').textContent = '已答對的詞語會保留。請填好餘下的空格，再交卷。';
+    });
+    byId('new-round').addEventListener('click', () => startRound());
+    byId('restart').addEventListener('click', () => {
+      const inProgress = !byId('practice').hidden && round.some(item => item.answers.some(Boolean));
+      if (!inProgress || window.confirm('要清空這輪答案，重新排列題目和詞語嗎？')) startRound();
+    });
+    startRound(false);
+  </script>
+</body>
+</html>
